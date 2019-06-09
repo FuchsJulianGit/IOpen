@@ -1,16 +1,28 @@
 from PIL import Image
 import keras.models as models
-# %matplotlib inline
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import ImageDraw
+#import RPi.GPIO as io
+import time
 
-img = Image.open("bild3.jpg")
-img = img.resize((round(img.size[0] / 5), round(img.size[1] / 5)), resample=Image.BICUBIC)
+#import camera
+#
 
-filename = "cardetector.h5"
+
+#img = Image.open("bild3.jpg")
+#img = img.resize((round(img.size[0] / 5), round(img.size[1] / 5)), resample=Image.BICUBIC)
+
+#io.setmode(io.BOARD)  #pinnumber instead of gpio numbers
+#io.setup(7,io.OUT)  #pin 7 als Ausgang
+
+
+filename = "Untitled Folder\cardetector.h5"
 
 model = models.load_model(filename)
+
+ACCURACY_UP_TO = 0.98
+ACCURACY_DOWN_TO = 0.70
 
 sizes = [
          400,350,300,
@@ -19,49 +31,52 @@ sizes = [
             ]
 step_size = 50
 cars = []
-for size in sizes:
-    for x in range(0, img.size[0]- 100, step_size):
-        for y in range(0, img.size[1] - size, step_size):
-            part = img.crop((x, y, x + size, y + size))
-            data =np.asarray(part.resize((32,32), resample=Image.BICUBIC))
-            data = data.astype(np.float32)/ 255.
-
-            pred = model.predict(data.reshape(-1, 32, 32, 3))
-            if pred[0][0] > 0.98:
-                cars.append((x,y, size))
-            #plt.imshow(part)
-            #plt.show()
-
-            
-out = img.copy()
-draw = ImageDraw.Draw(out)
-
-cars_drawn = []
 
 
-for car in cars:
-    exists = False
-    #points = [
-     #   car,
-      #  (car[0]+ size,car[1]+size)
-    #]
-    #print(points)
-    #draw.rectangle(points)
-    #print(car)
-    for car_drawn in cars_drawn:
-        if car[0] >= car_drawn[0] and car[0] <= car_drawn[0] + car_drawn[2]:
-            if car[1]>= car_drawn[1] and car[1]<= car_drawn[1] + car_drawn[2]:
-                exists = True
+carDetectedAlready = True
+
+while True:
+    #Getting Img
     
-    if exists == False:
-        points = [
-            (car[0], car[1]),
-            (car[0], car[1]+car[2]),
-            (car[0]+car[2], car[1]+ car[2]),
-            (car[0] +car[2], car[1]),
-            (car[0], car[1])
-        ]
-        draw.line(points, "yellow", 5)
-        cars_drawn.append(car)
-        print(car)
+    img = Image.open("Untitled Folder\Bild3.jpg")
+    img = img.resize((round(img.size[0] * 5), round(img.size[1] * 5)), resample=Image.BICUBIC)
+    ##img = camera.captureJPEG(300, 200)
+    
 
+    #print(img)
+    #Reshaping
+    for size in sizes:
+        for x in range(0, img.size[0]- 100, step_size):
+            for y in range(0, img.size[1] - size, step_size):
+                part = img.crop((x, y, x + size, y + size))
+                data =np.asarray(part.resize((32,32), resample=Image.BICUBIC))
+                data = data.astype(np.float32)/ 255.
+
+                pred = model.predict(data.reshape(-1, 32, 32, 3))
+                
+                if pred[0][0] > ACCURACY_UP_TO:
+                    cars.append((x,y, size))
+                    if carDetectedAlready: 
+                        print("Car detected")
+                        ##io.output(7,io.HIGH) #pin 7 ein
+                        ##time.sleep(100)
+                        ##io.output(7,io.LOW) #pin 7 wieder aus
+                        ##io.cleanup()
+                        carDetectedAlready = False
+                    
+                    else:
+                        if pred[0][0] < ACCURACY_DOWN_TO:
+                            carDetectedAlready = True
+                    
+                    
+                    
+                #plt.imshow(part)
+                #plt.show()
+                #else:
+                   # print("No Car detected")
+            
+    out = img.copy()
+    draw = ImageDraw.Draw(out)
+    #img.show(out)
+
+    cars_drawn = []
