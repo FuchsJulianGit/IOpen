@@ -1,3 +1,2 @@
 # IOpen
-the intelligent garage door 
-Hello World
+the intelligent garage door opening solution
